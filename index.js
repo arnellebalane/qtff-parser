@@ -12,7 +12,8 @@ const atomParsersMap = {
     ftyp: parseFtyp,
     free: parseFreeSkip,
     skip: parseFreeSkip,
-    moov: parseMoov
+    moov: parseMoov,
+    mvhd: parseMvhd
 };
 
 fs.readFile(VIDEO_PATH, (err, data) => {
@@ -105,4 +106,33 @@ function parseFreeSkip(atom) {
 
 function parseMoov(atom) {
     return parseAtoms(getAtoms(atom, 8));
+}
+
+function parseMvhd(atom) {
+    const iterator = bufferIterator(atom);
+    const atomSize = iterator.next(4).readUInt32BE(0);
+    const atomType = iterator.next(4).toString('ascii');
+    const version = iterator.next(1).readUInt8(0);
+    const flags = Array.from(iterator.next(3));
+    const creationTime = iterator.next(4).readUInt32BE(0);
+    const modificationTime = iterator.next(4).readUInt32BE(0);
+    const timeScale = iterator.next(4).readUInt32BE(0);
+    const duration = iterator.next(4).readUInt32BE(0);
+    const preferredRate = iterator.next(4);  // TODO
+    const preferredVolume = iterator.next(2);  // TODO
+    const reserved = iterator.next(10);
+    const matrixStructure = iterator.next(36);
+    const previewTime = iterator.next(4).readUInt32BE(0);
+    const previewDuration = iterator.next(4).readUInt32BE(0);
+    const posterTime = iterator.next(4).readUInt32BE(0);
+    const selectionTime = iterator.next(4).readUInt32BE(0);
+    const selectionDuration = iterator.next(4).readUInt32BE(0);
+    const currentTime = iterator.next(4).readUInt32BE(0);
+    const nextTrackId = iterator.next(4).readUInt32BE(0);
+
+    return {
+        version, flags, creationTime, modificationTime, timeScale, duration,
+        preferredRate, preferredVolume, reserved, previewTime, previewDuration,
+        posterTime, selectionTime, selectionDuration, currentTime, nextTrackId
+    };
 }
