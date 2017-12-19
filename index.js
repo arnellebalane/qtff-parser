@@ -14,9 +14,9 @@ const atomParsersMap = {
     skip: parseFreeSkip,
     moov: parseMoov,
     mvhd: parseMvhd,
+    trak: parseTrak,
+    tkhd: parseTkhd,
     udta: parseUdta,
-
-    // User Data Atoms
     AllF: parseAllF,
     SelO: parseSelO,
     WLOC: parseWloc
@@ -27,7 +27,7 @@ fs.readFile(VIDEO_PATH, (err, data) => {
     console.log(util.inspect(atoms, { depth: null, colors: true }));
 });
 
-function bufferIterator(buffer, offset=0) {
+function iterate(buffer, offset=0) {
     return {
         next(bytes, remain=false) {
             if (offset >= buffer.byteLength) return null;
@@ -98,7 +98,7 @@ function parseAtoms(atoms) {
 }
 
 function parseFtyp(atom) {
-    const iterator = bufferIterator(atom, 8);
+    const iterator = iterate(atom, 8);
     const majorBrand = iterator.next(4).toString('ascii');
 
     const minorVersionBCD = iterator.next(4);
@@ -108,7 +108,7 @@ function parseFtyp(atom) {
     const minorVersion = `${minorVersionMonth} ${minorVersionCentury}${minorVersionYear}`;
 
     const compatibleBrands = [];
-    const compatibleBrandsIterator = bufferIterator(iterator.rest());
+    const compatibleBrandsIterator = iterate(iterator.rest());
     const placeholderEntry = '00000000';
     while (compatibleBrandsIterator.next(4, true)) {
         const compatibleBrand = compatibleBrandsIterator.next(4);
@@ -130,7 +130,7 @@ function parseMoov(atom) {
 }
 
 function parseMvhd(atom) {
-    const iterator = bufferIterator(atom, 8);
+    const iterator = iterate(atom, 8);
     const version = iterator.next(1).readUInt8(0);
     const flags = Array.from(iterator.next(3));
     const creationTime = iterator.next(4).readUInt32BE(0);
@@ -151,8 +151,36 @@ function parseMvhd(atom) {
 
     return {
         version, flags, creationTime, modificationTime, timeScale, duration,
-        preferredRate, preferredVolume, reserved, previewTime, previewDuration,
-        posterTime, selectionTime, selectionDuration, currentTime, nextTrackId
+        preferredRate, preferredVolume, previewTime, previewDuration, posterTime,
+        selectionTime, selectionDuration, currentTime, nextTrackId
+    };
+}
+
+function parseTrak(atom) {
+    return parseAtoms(getAtoms(atom, 8));
+}
+
+function parseTkhd(atom) {
+    const iterator = iterate(atom, 8);
+    const version = iterator.next(1).readUInt8(0);
+    const flags = Array.from(iterator.next(3));
+    const creationTime = iterator.next(4).readUInt32BE(0);
+    const modificationTime = iterator.next(4).readUInt32BE(0);
+    const trackId = iterator.next(4).readUInt32BE(0);
+    iterator.next(4);  // Reserved by Apple
+    const duration = iterator.next(4).readUInt32BE(0);
+    iterator.next(8);  // Reserved by Apple
+    const layer = iterator.next(2).readUInt16BE(0);
+    const alternateGroup = iterator.next(2).readUInt16BE(0);
+    const volume = readFixedPointBuffer(iterator.next(2), 1, 1);
+    iterator.next(2);  // Reserved by Apple
+    const matrixStructure = iterator.next(36);
+    const trackWidth = iterator.next(4).readUInt32BE(0);
+    const trackHeight = iterator.next(4).readUInt32BE(0);
+
+    return {
+        version, flags, creationTime, modificationTime, trackId, duration,
+        layer, alternateGroup, volume, trackWidth, trackHeight
     };
 }
 
@@ -170,7 +198,7 @@ function parseSelO(atom) {
 }
 
 function parseWloc(atom) {
-    const iterator = bufferIterator(atom, 8);
+    const iterator = iterate(atom, 8);
     const values = [];
     while (iterator.next(2, true)) {
         const value = iterator.next(2).readUInt16BE(0);
