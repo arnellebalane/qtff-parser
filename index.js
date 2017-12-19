@@ -75,9 +75,7 @@ function parseAtoms(atoms) {
 }
 
 function parseFtyp(atom) {
-    const iterator = bufferIterator(atom);
-    const atomSize = iterator.next(4).readUInt32BE(0);
-    const atomType = iterator.next(4).toString('ascii');
+    const iterator = bufferIterator(atom, 8);
     const majorBrand = iterator.next(4).toString('ascii');
 
     const minorVersionBCD = iterator.next(4);
@@ -109,9 +107,7 @@ function parseMoov(atom) {
 }
 
 function parseMvhd(atom) {
-    const iterator = bufferIterator(atom);
-    const atomSize = iterator.next(4).readUInt32BE(0);
-    const atomType = iterator.next(4).toString('ascii');
+    const iterator = bufferIterator(atom, 8);
     const version = iterator.next(1).readUInt8(0);
     const flags = Array.from(iterator.next(3));
     const creationTime = iterator.next(4).readUInt32BE(0);
