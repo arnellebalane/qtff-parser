@@ -11,20 +11,13 @@ const EXTENDED_SIZE_BYTES = 8;
 const atomParsersMap = {
     ftyp: parseFtyp,
     free: parseFreeSkip,
-    skip: parseFreeSkip
+    skip: parseFreeSkip,
+    moov: parseMoov
 };
 
 fs.readFile(VIDEO_PATH, (err, data) => {
-    const atoms = getAtoms(data);
-
-    const parsed = atoms.map(atom => {
-        const size = atom.readUInt32BE(0);
-        const type = atom.slice(SIZE_BYTES, SIZE_BYTES + TYPE_BYTES).toString('ascii');
-        const data = type in atomParsersMap ? atomParsersMap[type](atom) : null;
-        return { size, type, data };
-    });
-
-    console.log(util.inspect(parsed, { depth: null, colors: true }));
+    const atoms = parseAtoms(getAtoms(data));
+    console.log(util.inspect(atoms, { depth: null, colors: true }));
 });
 
 function getAtoms(buffer, offset=0) {
@@ -52,8 +45,17 @@ function getAtomSize(buffer, offset=0) {
     return extendedSize;
 }
 
+function parseAtoms(atoms) {
+    return atoms.map(atom => {
+        const size = atom.readUInt32BE(0);
+        const type = atom.slice(SIZE_BYTES, SIZE_BYTES + TYPE_BYTES).toString('ascii');
+        const data = type in atomParsersMap ? atomParsersMap[type](atom) : null;
+        return { size, type, data };
+    });
+}
+
 function parseFtyp(atom) {
-    const atomSize = getAtomSize(atom);
+    const atomSize = atom.readUInt32BE(0);
     const majorBrandStart = 8;
     const majorBrandEnd = majorBrandStart + 4;
     const minorVersionStart = majorBrandEnd;
@@ -84,4 +86,8 @@ function parseFtyp(atom) {
 function parseFreeSkip(atom) {
     const atomSize = getAtomSize(atom);
     return { freeSpace: atomSize - 8 };
+}
+
+function parseMoov(atom) {
+    return parseAtoms(getAtoms(atom, 8));
 }
