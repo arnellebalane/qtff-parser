@@ -1,0 +1,24 @@
+{
+  "name": "qtff-parser",
+  "version": "1.0.0",
+  "description": "quicktime file format parser",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arnellebalane/qtff-parser.git"
+  },
+  "keywords": [
+    "qtff",
+    "quicktime",
+    "parser"
+  ],
+  "author": "Arnelle Balane <arnellebalane@gmail.com> (https://arnellebalane.com/)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/arnellebalane/qtff-parser/issues"
+  },
+  "homepage": "https://github.com/arnellebalane/qtff-parser#readme"
+}
