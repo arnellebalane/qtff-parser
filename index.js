@@ -49,7 +49,7 @@ function getAtoms(buffer, offset=0) {
 
     while (true) {
         const size = getAtomSize(buffer, offset);
-        const atom = buffer.slice(offset, offset + size);
+        const atom = getAtom(buffer, offset, size);
         atoms.push(atom);
 
         offset += size;
@@ -57,6 +57,13 @@ function getAtoms(buffer, offset=0) {
     }
 
     return atoms;
+}
+
+function getAtom(buffer, offset, size) {
+    if (size === 0) {
+        return buffer.slice(offset);
+    }
+    return buffer.slice(offset, offset + size);
 }
 
 function getAtomSize(buffer, offset=0) {
