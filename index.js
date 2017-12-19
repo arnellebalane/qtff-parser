@@ -14,7 +14,12 @@ const atomParsersMap = {
     skip: parseFreeSkip,
     moov: parseMoov,
     mvhd: parseMvhd,
-    udta: parseUdta
+    udta: parseUdta,
+
+    // User Data Atoms
+    AllF: parseAllF,
+    SelO: parseSelO,
+    WLOC: parseWloc
 };
 
 fs.readFile(VIDEO_PATH, (err, data) => {
@@ -153,24 +158,23 @@ function parseMvhd(atom) {
 
 function parseUdta(atom) {
     return parseAtoms(getAtoms(atom, 8))
-        .filter(atom => atom.size > 0)
-        .map(atom => {
-            switch (atom.type) {
-                case 'AllF':
-                    atom.data = atom.buffer.readUInt8(8);
-                    break;
-                case 'SelO':
-                    atom.data = atom.buffer.readUInt8(8);
-                    break;
-                case 'WLOC':
-                    const iterator = bufferIterator(atom.buffer, 8)
-                    atom.data = [];
-                    while (iterator.next(2, true)) {
-                        const value = iterator.next(2).readUInt16BE(0);
-                        atom.data.push(value);
-                    }
-                    break;
-            }
-            return atom;
-        });
+        .filter(atom => atom.size > 0);
+}
+
+function parseAllF(atom) {
+    return atom.readUInt8(8);
+}
+
+function parseSelO(atom) {
+    return atom.readUInt8(8);
+}
+
+function parseWloc(atom) {
+    const iterator = bufferIterator(atom, 8);
+    const values = [];
+    while (iterator.next(2, true)) {
+        const value = iterator.next(2).readUInt16BE(0);
+        values.push(value);
+    }
+    return values;
 }
