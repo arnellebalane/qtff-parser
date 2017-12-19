@@ -9,7 +9,9 @@ const TYPE_BYTES = 4;
 const EXTENDED_SIZE_BYTES = 8;
 
 const atomParsersMap = {
-    ftyp: parseFtyp
+    ftyp: parseFtyp,
+    free: parseFreeSkip,
+    skip: parseFreeSkip
 };
 
 fs.readFile(VIDEO_PATH, (err, data) => {
@@ -77,4 +79,9 @@ function parseFtyp(atom) {
     }
 
     return { majorBrand, minorVersion, compatibleBrands };
+}
+
+function parseFreeSkip(atom) {
+    const atomSize = getAtomSize(atom);
+    return { freeSpace: atomSize - 8 };
 }
