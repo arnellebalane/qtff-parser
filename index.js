@@ -13,7 +13,8 @@ const atomParsersMap = {
     free: parseFreeSkip,
     skip: parseFreeSkip,
     moov: parseMoov,
-    mvhd: parseMvhd
+    mvhd: parseMvhd,
+    udta: parseUdta
 };
 
 fs.readFile(VIDEO_PATH, (err, data) => {
@@ -81,7 +82,13 @@ function parseAtoms(atoms) {
         const size = atom.readUInt32BE(0);
         const type = atom.slice(SIZE_BYTES, SIZE_BYTES + TYPE_BYTES).toString('ascii');
         const data = type in atomParsersMap ? atomParsersMap[type](atom) : null;
-        return { size, type, data };
+        const parsed = { size, type, data };
+        Object.defineProperty(parsed, 'buffer', {
+            value: atom,
+            enumerable: false,
+            writable: false
+        });
+        return parsed;
     });
 }
 
@@ -125,8 +132,8 @@ function parseMvhd(atom) {
     const modificationTime = iterator.next(4).readUInt32BE(0);
     const timeScale = iterator.next(4).readUInt32BE(0);
     const duration = iterator.next(4).readUInt32BE(0);
-    const preferredRate = readFixedPointBuffer(iterator.next(4), 2, 2);  // TODO
-    const preferredVolume = readFixedPointBuffer(iterator.next(2), 1, 1);  // TODO
+    const preferredRate = readFixedPointBuffer(iterator.next(4), 2, 2);
+    const preferredVolume = readFixedPointBuffer(iterator.next(2), 1, 1);
     const reserved = Array.from(iterator.next(10));
     const matrixStructure = iterator.next(36);
     const previewTime = iterator.next(4).readUInt32BE(0);
@@ -142,4 +149,28 @@ function parseMvhd(atom) {
         preferredRate, preferredVolume, reserved, previewTime, previewDuration,
         posterTime, selectionTime, selectionDuration, currentTime, nextTrackId
     };
+}
+
+function parseUdta(atom) {
+    return parseAtoms(getAtoms(atom, 8))
+        .filter(atom => atom.size > 0)
+        .map(atom => {
+            switch (atom.type) {
+                case 'AllF':
+                    atom.data = atom.buffer.readUInt8(8);
+                    break;
+                case 'SelO':
+                    atom.data = atom.buffer.readUInt8(8);
+                    break;
+                case 'WLOC':
+                    const iterator = bufferIterator(atom.buffer, 8)
+                    atom.data = [];
+                    while (iterator.next(2, true)) {
+                        const value = iterator.next(2).readUInt16BE(0);
+                        atom.data.push(value);
+                    }
+                    break;
+            }
+            return atom;
+        });
 }
