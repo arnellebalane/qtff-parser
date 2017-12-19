@@ -40,6 +40,10 @@ function bufferIterator(buffer, offset=0) {
     };
 }
 
+function readFixedPointBuffer(buffer, whole, fraction) {
+    return buffer.readUIntBE(0, whole + fraction) >> (8 * fraction);
+}
+
 function getAtoms(buffer, offset=0) {
     const atoms = [];
 
@@ -114,9 +118,9 @@ function parseMvhd(atom) {
     const modificationTime = iterator.next(4).readUInt32BE(0);
     const timeScale = iterator.next(4).readUInt32BE(0);
     const duration = iterator.next(4).readUInt32BE(0);
-    const preferredRate = iterator.next(4);  // TODO
-    const preferredVolume = iterator.next(2);  // TODO
-    const reserved = iterator.next(10);
+    const preferredRate = readFixedPointBuffer(iterator.next(4), 2, 2);  // TODO
+    const preferredVolume = readFixedPointBuffer(iterator.next(2), 1, 1);  // TODO
+    const reserved = Array.from(iterator.next(10));
     const matrixStructure = iterator.next(36);
     const previewTime = iterator.next(4).readUInt32BE(0);
     const previewDuration = iterator.next(4).readUInt32BE(0);
