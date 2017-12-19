@@ -20,6 +20,25 @@ fs.readFile(VIDEO_PATH, (err, data) => {
     console.log(util.inspect(atoms, { depth: null, colors: true }));
 });
 
+function bufferIterator(buffer, offset=0) {
+    return {
+        next(bytes, remain=false) {
+            if (offset >= buffer.byteLength) return null;
+
+            const slice = buffer.slice(offset, offset + bytes);
+            if (!remain) {
+                offset += bytes;
+            }
+            return slice;
+        },
+        rest() {
+            const slice = buffer.slice(offset);
+            offset = buffer.byteLength;
+            return slice;
+        }
+    };
+}
+
 function getAtoms(buffer, offset=0) {
     const atoms = [];
 
@@ -55,28 +74,24 @@ function parseAtoms(atoms) {
 }
 
 function parseFtyp(atom) {
-    const atomSize = atom.readUInt32BE(0);
-    const majorBrandStart = 8;
-    const majorBrandEnd = majorBrandStart + 4;
-    const minorVersionStart = majorBrandEnd;
-    const minorVersionEnd = minorVersionStart + 4;
-    const compatibleBrandsStart = minorVersionEnd;
-    const compatibleBrandsEnd = compatibleBrandsStart + (atomSize - compatibleBrandsStart);
+    const iterator = bufferIterator(atom);
+    const atomSize = iterator.next(4).readUInt32BE(0);
+    const atomType = iterator.next(4).toString('ascii');
+    const majorBrand = iterator.next(4).toString('ascii');
 
-    const majorBrand = atom.slice(majorBrandStart, majorBrandEnd).toString('ascii');
-
-    const minorVersionBCD = atom.slice(minorVersionStart, minorVersionEnd);
+    const minorVersionBCD = iterator.next(4);
     const minorVersionCentury = minorVersionBCD[0].toString(16).padStart(2, '0');
     const minorVersionYear = minorVersionBCD[1].toString(16).padStart(2, '0');
     const minorVersionMonth = minorVersionBCD[2].toString(16).padStart(2, '0');
     const minorVersion = `${minorVersionMonth} ${minorVersionCentury}${minorVersionYear}`;
 
     const compatibleBrands = [];
+    const compatibleBrandsIterator = bufferIterator(iterator.rest());
     const placeholderEntry = '00000000';
-    for (let i = compatibleBrandsStart; i < compatibleBrandsEnd; i += 4) {
-        const compatibleBrandBuffer = atom.slice(i, i + 4);
-        if (compatibleBrandBuffer.toString('hex') !== placeholderEntry) {
-            compatibleBrands.push(compatibleBrandBuffer.toString('ascii'));
+    while (compatibleBrandsIterator.next(4, true)) {
+        const compatibleBrand = compatibleBrandsIterator.next(4);
+        if (compatibleBrand.toString('hex') !== placeholderEntry) {
+            compatibleBrands.push(compatibleBrand.toString('ascii'));
         }
     }
 
