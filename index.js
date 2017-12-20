@@ -50,7 +50,7 @@ function iterate(buffer, offset=0) {
     };
 }
 
-function readFixedPointBuffer(buffer, whole, fraction) {
+function readFixedPointBuffer(buffer, whole=buffer.byteLength / 2, fraction=whole) {
     return buffer.readUIntBE(0, whole + fraction) >> (8 * fraction);
 }
 
@@ -141,8 +141,8 @@ function parseMvhd(atom) {
     const modificationTime = iterator.next(4).readUInt32BE(0);
     const timeScale = iterator.next(4).readUInt32BE(0);
     const duration = iterator.next(4).readUInt32BE(0);
-    const preferredRate = readFixedPointBuffer(iterator.next(4), 2, 2);
-    const preferredVolume = readFixedPointBuffer(iterator.next(2), 1, 1);
+    const preferredRate = readFixedPointBuffer(iterator.next(4));
+    const preferredVolume = readFixedPointBuffer(iterator.next(2));
     const reserved = Array.from(iterator.next(10));
     const matrixStructure = iterator.next(36);
     const previewTime = iterator.next(4).readUInt32BE(0);
@@ -176,11 +176,11 @@ function parseTkhd(atom) {
     iterator.next(8);  // Reserved by Apple
     const layer = iterator.next(2).readUInt16BE(0);
     const alternateGroup = iterator.next(2).readUInt16BE(0);
-    const volume = readFixedPointBuffer(iterator.next(2), 1, 1);
+    const volume = readFixedPointBuffer(iterator.next(2));
     iterator.next(2);  // Reserved by Apple
     const matrixStructure = iterator.next(36);
-    const trackWidth = readFixedPointBuffer(iterator.next(4), 2, 2);
-    const trackHeight = readFixedPointBuffer(iterator.next(4), 2, 2);
+    const trackWidth = readFixedPointBuffer(iterator.next(4));
+    const trackHeight = readFixedPointBuffer(iterator.next(4));
 
     return {
         version, flags, creationTime, modificationTime, trackId, duration,
@@ -196,8 +196,8 @@ function parseTaptLeaf(atom) {
     const iterator = iterate(atom, 8);
     const version = iterator.next(1).readUInt8(0);
     const flags = Array.from(iterator.next(3));
-    const width = readFixedPointBuffer(iterator.next(4), 2, 2);
-    const height = readFixedPointBuffer(iterator.next(4), 2, 2);
+    const width = readFixedPointBuffer(iterator.next(4));
+    const height = readFixedPointBuffer(iterator.next(4));
 
     return { version, flags, width, height };
 }
