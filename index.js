@@ -175,8 +175,8 @@ function parseTkhd(atom) {
     const volume = readFixedPointBuffer(iterator.next(2), 1, 1);
     iterator.next(2);  // Reserved by Apple
     const matrixStructure = iterator.next(36);
-    const trackWidth = iterator.next(4).readUInt32BE(0);
-    const trackHeight = iterator.next(4).readUInt32BE(0);
+    const trackWidth = readFixedPointBuffer(iterator.next(4), 2, 2);
+    const trackHeight = readFixedPointBuffer(iterator.next(4), 2, 2);
 
     return {
         version, flags, creationTime, modificationTime, trackId, duration,
