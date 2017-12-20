@@ -29,6 +29,7 @@ const atomParsersMap = {
     vmhd: parseVmhd,
     smhd: parseSmhd,
     dinf: parseDinf,
+    dref: parseDref,
     stbl: parseStbl,
     udta: parseUdta,
     AllF: parseAllF,
@@ -297,6 +298,27 @@ function parseSmhd(atom) {
 
 function parseDinf(atom) {
     return parseAtoms(getAtoms(atom, 8));
+}
+
+function parseDref(atom) {
+    const iterator = iterate(atom, 8);
+    const version = iterator.next(1).readUInt8(0);
+    const flags = Array.from(iterator.next(3));
+    const numberOfEntries = iterator.next(4).readUInt32BE(0);
+
+    const dataReferencesAtoms = getAtoms(iterator.rest());
+    const dataReferences = dataReferencesAtoms.map((ref) => {
+        const refIterator = iterate(ref);
+        return {
+            size: refIterator.next(4).readUInt32BE(0),
+            type: refIterator.next(4).toString('ascii'),
+            version: refIterator.next(1).readUInt8(0),
+            flags: Array.from(refIterator.next(3)),
+            data: Array.from(refIterator.rest())
+        };
+    });
+
+    return { version, flags, numberOfEntries, dataReferences };
 }
 
 function parseStbl(atom) {
