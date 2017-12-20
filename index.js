@@ -22,6 +22,14 @@ const atomParsersMap = {
     enof: parseTaptLeaf,
     edts: parseEdts,
     elst: parseElst,
+    mdia: parseMdia,
+    mdhd: parseMdhd,
+    hdlr: parseHdlr,
+    minf: parseMinf,
+    vmhd: parseVmhd,
+    smhd: parseSmhd,
+    dinf: parseDinf,
+    stbl: parseStbl,
     udta: parseUdta,
     AllF: parseAllF,
     SelO: parseSelO,
@@ -226,6 +234,73 @@ function parseElst(atom) {
     }
 
     return { version, flags, numberOfEntries, entries };
+}
+
+function parseMdia(atom) {
+    return parseAtoms(getAtoms(atom, 8));
+}
+
+function parseMdhd(atom) {
+    const iterator = iterate(atom, 8);
+    const version = iterator.next(1).readUInt8(0);
+    const flags = Array.from(iterator.next(3));
+    const creationTime = iterator.next(4).readUInt32BE(0);
+    const modificationTime = iterator.next(4).readUInt32BE(0);
+    const timeScale = iterator.next(4).readUInt32BE(0);
+    const duration = iterator.next(4).readUInt32BE(0);
+    const language = iterator.next(2).readUInt16BE(0);
+    const quality = iterator.next(2).readUInt16BE(0);
+
+    return {
+        version, flags, creationTime, modificationTime, timeScale,
+        language, quality
+    };
+}
+
+function parseHdlr(atom) {
+    const iterator = iterate(atom, 8);
+    const version = iterator.next(1).readUInt8(0);
+    const flags = Array.from(iterator.next(3));
+    const componentType = iterator.next(4).toString('ascii');
+    const componentSubtype = iterator.next(4).toString('ascii');
+
+    return { version, flags, componentType, componentSubtype };
+}
+
+function parseMinf(atom) {
+    return parseAtoms(getAtoms(atom, 8));
+}
+
+function parseVmhd(atom) {
+    const iterator = iterate(atom, 8);
+    const version = iterator.next(1).readUInt8(0);
+    const flags = Array.from(iterator.next(3));
+    const graphicsMode = iterator.next(2).readUInt16BE(0);
+    const opColor = [
+        iterator.next(2).readUInt16BE(0),
+        iterator.next(2).readUInt16BE(0),
+        iterator.next(2).readUInt16BE(0)
+    ];
+
+    return { version, flags, graphicsMode, opColor };
+}
+
+function parseSmhd(atom) {
+    const iterator = iterate(atom, 8);
+    const version = iterator.next(1).readUInt8(0);
+    const flags = Array.from(iterator.next(3));
+    const balance = iterator.next(2).readUInt16BE(0);
+    iterator.next(2);  // Reserved by Apple
+
+    return { version, flags, balance };
+}
+
+function parseDinf(atom) {
+    return parseAtoms(getAtoms(atom, 8));
+}
+
+function parseStbl(atom) {
+    return parseAtoms(getAtoms(atom, 8));
 }
 
 function parseUdta(atom) {
