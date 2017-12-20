@@ -16,6 +16,10 @@ const atomParsersMap = {
     mvhd: parseMvhd,
     trak: parseTrak,
     tkhd: parseTkhd,
+    tapt: parseTapt,
+    clef: parseTaptLeaf,
+    prof: parseTaptLeaf,
+    enof: parseTaptLeaf,
     udta: parseUdta,
     AllF: parseAllF,
     SelO: parseSelO,
@@ -182,6 +186,20 @@ function parseTkhd(atom) {
         version, flags, creationTime, modificationTime, trackId, duration,
         layer, alternateGroup, volume, trackWidth, trackHeight
     };
+}
+
+function parseTapt(atom) {
+    return parseAtoms(getAtoms(atom, 8));
+}
+
+function parseTaptLeaf(atom) {
+    const iterator = iterate(atom, 8);
+    const version = iterator.next(1).readUInt8(0);
+    const flags = Array.from(iterator.next(3));
+    const width = readFixedPointBuffer(iterator.next(4), 2, 2);
+    const height = readFixedPointBuffer(iterator.next(4), 2, 2);
+
+    return { version, flags, width, height };
 }
 
 function parseUdta(atom) {
