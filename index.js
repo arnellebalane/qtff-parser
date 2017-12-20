@@ -20,6 +20,8 @@ const atomParsersMap = {
     clef: parseTaptLeaf,
     prof: parseTaptLeaf,
     enof: parseTaptLeaf,
+    edts: parseEdts,
+    elst: parseElst,
     udta: parseUdta,
     AllF: parseAllF,
     SelO: parseSelO,
@@ -200,6 +202,30 @@ function parseTaptLeaf(atom) {
     const height = readFixedPointBuffer(iterator.next(4));
 
     return { version, flags, width, height };
+}
+
+function parseEdts(atom) {
+    return parseAtoms(getAtoms(atom, 8));
+}
+
+function parseElst(atom) {
+    const iterator = iterate(atom, 8);
+    const version = iterator.next(1).readUInt8(0);
+    const flags = Array.from(iterator.next(3));
+    const numberOfEntries = iterator.next(4).readUInt32BE(0);
+
+    const entriesIterator = iterate(iterator.rest());
+    const entries = [];
+    while (entriesIterator.next(12, true)) {
+        const entry = {
+            trackDuration: entriesIterator.next(4).readInt32BE(0),
+            mediaTime: entriesIterator.next(4).readInt32BE(0),
+            mediaRate: entriesIterator.next(4).readInt32BE(0)
+        };
+        entries.push(entry);
+    }
+
+    return { version, flags, numberOfEntries, entries };
 }
 
 function parseUdta(atom) {
