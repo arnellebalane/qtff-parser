@@ -36,7 +36,9 @@ const atomParsersMap = {
     AllF: parseAllF,
     SelO: parseSelO,
     WLOC: parseWloc,
-    avc1: parseAvc1
+    avc1: parseAvc1,
+    avcC: parseAvcC,
+    colr: parseColr
 };
 
 fs.readFile(VIDEO_PATH, (err, data) => {
@@ -104,7 +106,7 @@ function parseAtoms(atoms) {
         const size = atom.readUInt32BE(0);
         const type = atom.slice(SIZE_BYTES, SIZE_BYTES + TYPE_BYTES).toString('ascii');
         const data = type in atomParsersMap ? atomParsersMap[type](atom) : null;
-        const parsed = { size, type, data };
+        const parsed = { size, type, data: size ? data : Array.from(atom) };
         Object.defineProperty(parsed, 'buffer', {
             value: atom,
             enumerable: false,
@@ -394,10 +396,38 @@ function parseAvc1(atom) {
 
     const depth = iterator.next(2).readUInt16BE(0);
     const colorTableId = iterator.next(2).readUInt16BE(0);
-
-    return {
+    const parsed = {
         version, revisionLevel, vendor, temporalQuality, spatialQuality, width,
         height, horizontalResolution, verticalResolution, dataSize, frameCount,
         compressorName, depth, colorTableId
     };
+
+    if (![16, 24, 32].includes(depth)) {
+        // TODO: Parse color table that follows
+    }
+
+    parsed.sampleDescriptionExtensions = parseAtoms(getAtoms(iterator.rest()));
+
+    return parsed;
+}
+
+function parseAvcC(atom) {
+    const iterator = iterate(atom, 8);
+    return Array.from(iterator.rest());
+}
+
+function parseColr(atom) {
+    const iterator = iterate(atom, 8);
+    const colorParameterType = iterator.next(4).toString('ascii');
+    const parsed = { colorParameterType };
+
+    if (colorParameterType === 'nclc') {
+        parsed.primariesIndex = iterator.next(2).readUInt16BE(0);
+        parsed.transferFunctionIndex = iterator.next(2).readUInt16BE(0);
+        parsed.matrixIndex = iterator.next(2).readUInt16BE(0);
+    } else if (colorParameterType === 'prof') {
+        // TODO: Parse ICC profile that follows
+    }
+
+    return parsed;
 }
