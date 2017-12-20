@@ -31,10 +31,12 @@ const atomParsersMap = {
     dinf: parseDinf,
     dref: parseDref,
     stbl: parseStbl,
+    stsd: parseStsd,
     udta: parseUdta,
     AllF: parseAllF,
     SelO: parseSelO,
-    WLOC: parseWloc
+    WLOC: parseWloc,
+    avc1: parseAvc1
 };
 
 fs.readFile(VIDEO_PATH, (err, data) => {
@@ -325,6 +327,30 @@ function parseStbl(atom) {
     return parseAtoms(getAtoms(atom, 8));
 }
 
+function parseStsd(atom) {
+    const iterator = iterate(atom, 8);
+    const version = iterator.next(1).readUInt8(0);
+    const flags = Array.from(iterator.next(3));
+    const numberOfEntries = iterator.next(4).readUInt32BE(0);
+
+    const sampleDescriptions = [];
+    for (let i = 0; i < numberOfEntries; i++) {
+        const size = iterator.next(4, true).readUInt32BE(0);
+        if (size === 0) continue;
+
+        const sample = iterator.next(size);
+        const sampleIterator = iterate(sample, 4);
+        const dataFormat = sampleIterator.next(4).toString('ascii');
+        sampleIterator.next(6);  // Reserved
+        const dataReferenceIndex = sampleIterator.next(2).readUInt16BE(0);
+        const dataBuffer = sampleIterator.rest();
+        const data = dataFormat in atomParsersMap ? atomParsersMap[dataFormat](dataBuffer) : null;
+        sampleDescriptions.push({ size, dataFormat, dataReferenceIndex, data });
+    }
+
+    return { version, flags, numberOfEntries, sampleDescriptions };
+}
+
 function parseUdta(atom) {
     return parseAtoms(getAtoms(atom, 8))
         .filter(atom => atom.size > 0);
@@ -346,4 +372,32 @@ function parseWloc(atom) {
         values.push(value);
     }
     return values;
+}
+
+function parseAvc1(atom) {
+    const iterator = iterate(atom);
+    const version = iterator.next(2).readUInt16BE(0);
+    const revisionLevel = iterator.next(2).readUInt16BE(0);
+    const vendor = iterator.next(4).toString('ascii');
+    const temporalQuality = iterator.next(4).readUInt32BE(0);
+    const spatialQuality = iterator.next(4).readUInt32BE(0);
+    const width = iterator.next(2).readUInt16BE(0);
+    const height = iterator.next(2).readUInt16BE(0);
+    const horizontalResolution = readFixedPointBuffer(iterator.next(4));
+    const verticalResolution = readFixedPointBuffer(iterator.next(4));
+    const dataSize = iterator.next(4).readUInt32BE(0);
+    const frameCount = iterator.next(2).readUInt16BE(0);
+
+    const compressorNameIterator = iterate(iterator.next(32));
+    const compressorNameLength = compressorNameIterator.next(1).readUInt8(0);
+    const compressorName = compressorNameIterator.next(compressorNameLength).toString('ascii');
+
+    const depth = iterator.next(2).readUInt16BE(0);
+    const colorTableId = iterator.next(2).readUInt16BE(0);
+
+    return {
+        version, revisionLevel, vendor, temporalQuality, spatialQuality, width,
+        height, horizontalResolution, verticalResolution, dataSize, frameCount,
+        compressorName, depth, colorTableId
+    };
 }
