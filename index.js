@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const util = require('util');
 
-const VIDEO_PATH = path.resolve(__dirname, 'video.mov');
+const VIDEO_PATH = process.argv[2] || path.resolve(__dirname, 'video.mov');
 
 const SIZE_BYTES = 4;
 const TYPE_BYTES = 4;
